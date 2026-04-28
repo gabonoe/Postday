@@ -214,8 +214,9 @@ body::before {
   -webkit-backdrop-filter: blur(12px);
   border-radius: 22px;
   padding: 10px 6px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 4px;
   box-shadow: 0 12px 28px rgba(150, 40, 100, 0.18);
   z-index: 5;
@@ -237,6 +238,8 @@ body::before {
   transition: color 200ms ease, background-color 200ms ease, transform 200ms ease;
 }
 .bnav svg { width: 20px; height: 20px; }
+.bnav--scaled svg { width: 31.2px; height: 31.2px; }
+.bnav--scaled { font-size: 14.3px; flex-direction: row; gap: 6px; margin-left: 8px; }
 .bnav--image {
   padding: 8px 12px;
   justify-content: center;
