@@ -281,6 +281,30 @@ body::before {
   .bnav svg { width: 18px; height: 18px; }
 }
 
+/* iPhone SE (375px) and similar small screens */
+@media (min-width: 360px) and (max-width: 376px) {
+  .app { padding: 14px 12px 90px; gap: 10px; }
+  .logo { width: clamp(200px, 55%, 280px); }
+  .tagline { font-size: clamp(14px, 4vw, 16px); }
+  .canvas-container { height: clamp(300px, 42vh, 380px); }
+  .buttons { gap: 12px; }
+  .btn {
+    font-size: clamp(13px, 3.5vw, 14px);
+    padding: 12px 16px 12px 12px;
+    gap: 12px;
+    letter-spacing: 0.4px;
+  }
+  .btn__icon { width: 34px; height: 34px; }
+  .btn__icon svg { width: 17px; height: 17px; }
+  .footer-note { font-size: clamp(11px, 3vw, 12px); }
+  .footer-note__icon { width: 22px; height: 22px; }
+  .footer-note__icon svg { width: 13px; height: 13px; }
+  .bottom-nav { padding: 8px 6px; }
+  .bnav { font-size: clamp(10px, 2.8vw, 11px); padding: 5px 3px; gap: 3px; }
+  .bnav svg { width: 19px; height: 19px; }
+  .bnav__image { height: clamp(45px, 12vw, 50px); }
+}
+
 /* Tablets (768px) */
 @media (min-width: 768px) and (max-width: 899px) {
   .app { max-width: 580px; }
