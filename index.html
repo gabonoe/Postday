@@ -116,5 +116,27 @@
   </script>
   <script type="module" src="main.js"></script>
   <script src="modal.js"></script>
+  <script>
+    // Fullscreen API - ocultar barras de navegación
+    function enterFullscreen() {
+      const doc = document.documentElement;
+      if (doc.requestFullscreen) {
+        doc.requestFullscreen();
+      } else if (doc.webkitRequestFullscreen) {
+        doc.webkitRequestFullscreen();
+      } else if (doc.msRequestFullscreen) {
+        doc.msRequestFullscreen();
+      }
+    }
+
+    // Activar pantalla completa al primer click en el documento
+    let fullscreenActivated = false;
+    document.addEventListener('click', () => {
+      if (!fullscreenActivated) {
+        enterFullscreen();
+        fullscreenActivated = true;
+      }
+    }, { once: true });
+  </script>
 </body>
 </html>
