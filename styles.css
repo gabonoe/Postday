@@ -271,7 +271,7 @@ body::before {
   .canvas-container { height: 280px; }
   .buttons { gap: 12px; }
   .btn {
-    font-size: 12px;
+    font-size: 10.8px;
     padding: 18px 20px 18px 16px;
     gap: 12px;
     letter-spacing: 0.3px;
@@ -295,7 +295,7 @@ body::before {
   .canvas-container { height: clamp(300px, 42vh, 380px); }
   .buttons { gap: 14px; }
   .btn {
-    font-size: clamp(13px, 3.5vw, 14px);
+    font-size: clamp(11.7px, 3.15vw, 12.6px);
     padding: 20px 22px 20px 18px;
     gap: 14px;
     letter-spacing: 0.4px;
