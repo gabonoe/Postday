@@ -305,6 +305,11 @@ body::before {
   .bnav__image { height: clamp(45px, 12vw, 50px); }
 }
 
+/* Mobile: reduce button width to 60% */
+@media (max-width: 767px) {
+  .buttons { max-width: 60%; margin: 0 auto; }
+}
+
 /* Tablets (768px) */
 @media (min-width: 768px) and (max-width: 899px) {
   .app { max-width: 580px; }
