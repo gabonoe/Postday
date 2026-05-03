@@ -1,0 +1,409 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Arial Black', Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  padding: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.screen {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  background: #000;
+}
+.hidden { display: none !important; }
+
+#portada {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.btn-main {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  margin-bottom: 8vh;
+  padding: 18px 60px;
+  font-size: clamp(20px, 4vw, 36px);
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(180deg, #22c55e, #15803d);
+  border: 4px solid #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 rgba(0,0,0,0.4), 0 0 30px rgba(34,197,94,0.6);
+  letter-spacing: 2px;
+  transition: transform 0.1s;
+}
+.btn-main:hover { transform: scale(1.05); }
+.btn-main:active { transform: translateY(4px); box-shadow: 0 4px 0 rgba(0,0,0,0.4); }
+
+.name-input {
+  position: absolute;
+  bottom: 250px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 12px 30px;
+  font-size: clamp(14px, 2.5vw, 20px);
+  font-weight: 400;
+  color: #000;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 30px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 200px;
+}
+.name-input::placeholder {
+  color: rgba(0,0,0,0.5);
+}
+.name-input:focus {
+  border-color: #22c55e;
+  background: #fff;
+}
+
+#splash { justify-content: flex-end; }
+
+/* HUD */
+#hud {
+  position: fixed; inset: 0; z-index: 5;
+  pointer-events: none;
+}
+#scoreBox {
+  position: absolute;
+  top: 20px; left: 20px;
+  background: rgba(0,0,0,0.55);
+  border: 3px solid #fff;
+  border-radius: 14px;
+  padding: 12px 18px;
+  color: #fff;
+  text-align: center;
+  min-width: 110px;
+  backdrop-filter: blur(4px);
+}
+.player-name { font-size: clamp(14px, 2.5vw, 18px); font-weight: 700; letter-spacing: 1px; color: #ffd54a; margin-bottom: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+.score-label { font-size: clamp(12px, 2vw, 16px); letter-spacing: 2px; opacity: 0.9; }
+#score { font-size: clamp(36px, 6vw, 56px); color: #ffd54a; line-height: 1; margin: 4px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+.shots-label { font-size: clamp(11px, 1.6vw, 14px); letter-spacing: 1px; opacity: 0.85; }
+
+#message {
+  position: absolute;
+  top: 30%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  font-size: clamp(80px, 18vw, 192px);
+  color: #fff;
+  text-shadow: 0 4px 0 #000, 0 0 30px rgba(255,255,255,0.6);
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(.2,1.6,.4,1);
+  letter-spacing: 3px;
+  -webkit-text-stroke: 2px #000;
+}
+#message.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+#message.goal { color: #ffd54a; }
+#message.miss { color: #ff5252; }
+
+#instructions {
+  position: absolute;
+  bottom: 45%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: clamp(30px, 3vw, 28px);
+  letter-spacing: 2px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.6);
+  opacity: 0.85;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.4; } }
+#instructions.hide { display: none; }
+
+#swipePointer {
+  position: absolute;
+  bottom: 35%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.9;
+  animation: swipeAnim 1.5s ease-in-out infinite;
+}
+#swipePointer svg {
+  width: 60px;
+  height: 60px;
+}
+@keyframes swipeAnim {
+  0%, 100% { transform: translateX(-50%) translateY(60px); opacity: 0.5; }
+  50% { transform: translateX(-50%) translateY(-60px); opacity: 1; }
+}
+
+#swipePointerLeft {
+  position: absolute;
+  bottom: 35%;
+  left: 40%;
+  transform: translateX(-50%);
+  opacity: 0.9;
+  animation: swipeLeftAnim 1.5s ease-in-out infinite;
+}
+#swipePointerLeft svg {
+  width: 60px;
+  height: 60px;
+}
+@keyframes swipeLeftAnim {
+  0%, 100% { transform: translateX(-50%) translate(60px, 60px); opacity: 0.5; }
+  50% { transform: translateX(-50%) translate(-60px, -60px); opacity: 1; }
+}
+
+#swipePointerRight {
+  position: absolute;
+  bottom: 35%;
+  left: 60%;
+  transform: translateX(-50%);
+  opacity: 0.9;
+  animation: swipeRightAnim 1.5s ease-in-out infinite;
+}
+#swipePointerRight svg {
+  width: 60px;
+  height: 60px;
+}
+@keyframes swipeRightAnim {
+  0%, 100% { transform: translateX(-50%) translate(-60px, 60px); opacity: 0.5; }
+  50% { transform: translateX(-50%) translate(60px, -60px); opacity: 1; }
+}
+
+#swipePointer.hide, #swipePointerLeft.hide, #swipePointerRight.hide { display: none; }
+
+/* End */
+#endScreen { background: rgba(0,0,0,0.85); }
+#endScreen.screenshot-transparent { background: transparent !important; }
+.end-player-name {
+  font-size: clamp(36px, 7.5vw, 54px);
+  color: #ffd54a;
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 8px rgba(0,0,0,0.8);
+}
+#endTitle {
+  font-size: clamp(40px, 10vw, 120px);
+  color: #fff;
+  text-align: center;
+  margin-bottom: 20px;
+  -webkit-text-stroke: 3px #000;
+  text-shadow: 0 6px 0 #000;
+  padding: 0 20px;
+}
+#endTitle.win { color: #ffd54a; }
+#endTitle.lose { color: #22c55e; font-size: clamp(32px, 8vw, 96px); }
+#endScore {
+  font-size: clamp(20px, 4vw, 36px);
+  color: #fff;
+  margin-bottom: 30px;
+}
+.btn-secondary {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 20px 0;
+  padding: 14px 40px;
+  font-size: clamp(16px, 3vw, 24px);
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+  border: 3px solid #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 0 20px rgba(59,130,246,0.5);
+  letter-spacing: 1px;
+  transition: transform 0.1s;
+}
+.btn-secondary:hover { transform: scale(1.05); }
+.btn-secondary:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.4); }
+#endScreen .btn-main { margin: 0; }
+
+/* Loading */
+#loading { color: #fff; font-size: 22px; gap: 20px; z-index: 20; }
+.spinner {
+  width: 60px; height: 60px;
+  border: 5px solid rgba(255,255,255,0.2);
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Confetti */
+#confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+}
+
+/* Rotate device overlay */
+#rotateOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px;
+  text-align: center;
+  color: #fff;
+}
+.rotate-icon {
+  font-size: 80px;
+  margin-bottom: 30px;
+  animation: rotateAnim 2s ease-in-out infinite;
+}
+.rotate-text {
+  font-size: clamp(20px, 6vw, 32px);
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  max-width: 90%;
+}
+@keyframes rotateAnim {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+/* Show overlay only on portrait mobile/tablet devices */
+@media (orientation: portrait) and (max-width: 1024px) {
+  #rotateOverlay { display: flex; }
+}
+
+/* Mobile adjustments for landscape mode */
+@media (max-width: 768px) {
+  /* Reduce large text sizes on mobile */
+  .btn-main {
+    font-size: clamp(16px, 3.5vw, 28px);
+    padding: 14px 40px;
+  }
+  .name-input {
+    font-size: clamp(12px, 2.2vw, 16px);
+    padding: 10px 24px;
+    min-width: 160px;
+  }
+  #score {
+    font-size: clamp(28px, 5vw, 44px);
+  }
+  #message {
+    font-size: clamp(48px, 12vw, 120px);
+  }
+  #instructions {
+    font-size: clamp(20px, 2.5vw, 24px);
+  }
+  .end-player-name {
+    font-size: clamp(24px, 5vw, 36px);
+  }
+  #endTitle {
+    font-size: clamp(28px, 7vw, 80px);
+  }
+  #endTitle.lose {
+    font-size: clamp(24px, 5.5vw, 64px);
+  }
+  #endScore {
+    font-size: clamp(16px, 3vw, 28px);
+  }
+  .btn-secondary {
+    font-size: clamp(14px, 2.5vw, 20px);
+    padding: 12px 32px;
+  }
+  .rotate-text {
+    font-size: clamp(16px, 4vw, 24px);
+  }
+  /* Reduce swipe pointer sizes on mobile */
+  #swipePointer svg, #swipePointerLeft svg, #swipePointerRight svg {
+    width: 40px;
+    height: 40px;
+  }
+  #scoreBox {
+    padding: 8px 12px;
+    min-width: 90px;
+  }
+}
+
+/* Mobile landscape mode specific adjustments */
+@media (max-height: 500px) and (orientation: landscape) {
+  .btn-main {
+    font-size: clamp(14px, 3vw, 24px);
+    padding: 10px 32px;
+    margin-bottom: 4vh;
+  }
+  .name-input {
+    font-size: clamp(11px, 2vw, 14px);
+    padding: 8px 20px;
+    min-width: 140px;
+    bottom: 180px;
+  }
+  #score {
+    font-size: clamp(24px, 4vw, 36px);
+  }
+  .player-name {
+    font-size: clamp(12px, 2vw, 14px);
+  }
+  .score-label {
+    font-size: clamp(10px, 1.5vw, 12px);
+  }
+  .shots-label {
+    font-size: clamp(10px, 1.4vw, 12px);
+  }
+  #message {
+    font-size: clamp(36px, 8vw, 80px);
+  }
+  #instructions {
+    font-size: clamp(16px, 2vw, 20px);
+    bottom: 40%;
+  }
+  .end-player-name {
+    font-size: clamp(20px, 4vw, 28px);
+    margin-bottom: 10px;
+  }
+  #endTitle {
+    font-size: clamp(24px, 5vw, 56px);
+    margin-bottom: 12px;
+  }
+  #endTitle.lose {
+    font-size: clamp(20px, 4vw, 44px);
+  }
+  #endScore {
+    font-size: clamp(14px, 2.5vw, 22px);
+    margin-bottom: 20px;
+  }
+  .btn-secondary {
+    font-size: clamp(12px, 2vw, 18px);
+    padding: 10px 28px;
+    margin: 0 0 12px 0;
+  }
+  #scoreBox {
+    padding: 6px 10px;
+    min-width: 80px;
+    top: 12px;
+    left: 12px;
+  }
+  /* Reduce swipe pointers in landscape */
+  #swipePointer svg, #swipePointerLeft svg, #swipePointerRight svg {
+    width: 32px;
+    height: 32px;
+  }
+  #swipePointer, #swipePointerLeft, #swipePointerRight {
+    bottom: 30%;
+  }
+}

@@ -2,111 +2,107 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Postday*</title>
-  <link rel="icon" type="image/webp" href="assets/im/LogoPost.webp" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>tanda de penales</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='240' fill='white' stroke='black' stroke-width='8'/><path d='M256 16L180 100L80 80L120 180L40 280L140 280L180 380L256 300L332 380L372 280L472 280L392 180L432 80L332 100Z' fill='white' stroke='black' stroke-width='6'/><path d='M256 16L180 100L256 180L332 100Z' fill='white' stroke='black' stroke-width='4'/><path d='M80 80L120 180L180 100Z' fill='white' stroke='black' stroke-width='4'/><path d='M432 80L392 180L332 100Z' fill='white' stroke='black' stroke-width='4'/><path d='M120 180L40 280L140 280L256 180Z' fill='white' stroke='black' stroke-width='4'/><path d='M392 180L472 280L372 280L256 180Z' fill='white' stroke='black' stroke-width='4'/><path d='M140 280L180 380L256 300L256 180Z' fill='white' stroke='black' stroke-width='4'/><path d='M372 280L332 380L256 300L256 180Z' fill='white' stroke='black' stroke-width='4'/></svg>" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css" />
+  <audio id="bgMusic" loop preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/music/guanteySom.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="ruidoG" loop preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/ruidog.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="silbStart" preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/silb.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="silbEnd" preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/silbfin.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="kickSound" preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/kick.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="golSound" preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/gol.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="abuSound" preload="auto" playsinline webkit-playsinline>
+    <source src="assets/sound/abu.mp3" type="audio/mpeg">
+  </audio>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-      <img src="assets/im/LogoPost.webp" alt="Postday Levonorgestrel" class="logo" />
-      <p class="tagline">La pastilla del día siguiente</p>
-    </header>
-
-    <main class="main">
-      <div id="canvas-container" class="canvas-container" aria-label="Modelo 3D de la caja Postday"></div>
-    </main>
-
-    <nav class="buttons" aria-label="Acciones principales">
-      <button type="button" class="btn btn--purple" id="btn-verify">
-        <span class="btn__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
-        </span>
-        <span class="btn__label">VERIFICA TU PRODUCTO</span>
-      </button>
-      <button type="button" class="btn btn--pink">
-        <span class="btn__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        </span>
-        <span class="btn__label">MEDIDAS DE SEGURIDAD</span>
-      </button>
-      <button type="button" class="btn btn--pink">
-        <span class="btn__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
-        </span>
-        <span class="btn__label">MODO DE USO</span>
-      </button>
-    </nav>
-
-    <p class="footer-note">
-      <span class="footer-note__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3z"/></svg>
-      </span>
-      Siempre segura, siempre contigo.
-    </p>
-
-    <nav class="bottom-nav" aria-label="Navegación principal">
-      <button type="button" class="bnav bnav--scaled">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#d94e8f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
-        <span>Presentaciones</span>
-      </button>
-      <a href="https://www.ifaonline.com.mx/" target="_blank" rel="noopener noreferrer" class="bnav bnav--image">
-        <img src="assets/im/IFA.png" alt="IFA" class="bnav__image" />
-      </a>
-    </nav>
+  <!-- Splash -->
+  <div id="splash" class="screen">
+    <img id="portada" src="assets/im/portadaJuego.png" alt="Portada" />
+    <input type="text" id="playerName" placeholder="Escribe tu nombre aquí" class="name-input" maxlength="20" />
+    <button id="btnStart" class="btn-main">COMENZAR</button>
   </div>
 
-  <!-- Modal de verificación -->
-  <div id="verify-modal" class="modal" aria-hidden="true">
-    <div class="modal__overlay" aria-hidden="true"></div>
-    <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <button type="button" class="modal__close" aria-label="Cerrar modal">
-        <span class="modal__close-x" aria-hidden="true">×</span>
-        <span class="modal__close-text">CERRAR</span>
-      </button>
-
-      <div id="modal-step-input" class="modal__step">
-        <h2 id="modal-title" class="modal__title">...</h2>
-        <p class="modal__subtitle">Ingresa el número de seguridad al interior de tu caja</p>
-        <input type="text" id="security-code" class="modal__input" placeholder="Ej: ABC123" maxlength="20" autocomplete="off" />
-        <button type="button" id="btn-verify-code" class="modal__btn modal__btn--primary">ACEPTAR</button>
-      </div>
-
-      <div id="modal-step-success" class="modal__step modal__step--hidden">
-        <div class="modal__icon modal__icon--success">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-        </div>
-        <h2 class="modal__title modal__title--success">¡Producto original!</h2>
-        <p class="modal__message modal__message--success">Tu producto es original, puedes usarlo con confianza</p>
-      </div>
-
-      <div id="modal-step-warning" class="modal__step modal__step--hidden">
-        <div class="modal__icon modal__icon--warning">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-        </div>
-        <h2 class="modal__title modal__title--warning">CUIDADO</h2>
-        <p class="modal__message modal__message--warning">Ese número no está registrado en nuestra base de datos o se ha escaneado más de 5 veces</p>
-        <div id="report-section" class="modal__report-section modal__report-section--hidden">
-          <p class="modal__report-label">Reportar producto sospechoso</p>
-          <input type="email" id="report-email" class="modal__input" placeholder="Tu correo electrónico" autocomplete="off" />
-          <input type="text" id="report-location" class="modal__input" placeholder="¿Dónde compraste tu producto?" autocomplete="off" />
-          <button type="button" id="btn-report" class="modal__btn modal__btn--secondary">REPORTAR</button>
-        </div>
-        <button type="button" id="btn-show-report" class="modal__btn modal__btn--secondary">REPORTAR</button>
-      </div>
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="scoreBox">
+      <div class="player-name" id="playerNameDisplay">Jugador</div>
+      <div class="score-label">GOLES</div>
+      <div id="score">0</div>
+      <div class="shots-label">TIRO <span id="shotNum">1</span>/10</div>
+    </div>
+    <div id="message"></div>
+    <div id="instructions">Desliza para patear</div>
+    <div id="swipePointerLeft">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 50L10 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M22 22L10 10L22 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M10 10L10 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="swipePointer">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 50L30 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M20 20L30 10L40 20" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="swipePointerRight">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 50L50 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M38 22L50 10L38 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M50 10L50 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
   </div>
 
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
+  <!-- End screen -->
+  <div id="endScreen" class="screen hidden">
+    <div class="end-player-name" id="endPlayerName">Jugador</div>
+    <div id="endTitle"></div>
+    <div id="endScore"></div>
+    <button id="btnScreenshot" class="btn-secondary">CAPTURAR PANTALLA</button>
+    <button id="btnRestart" class="btn-main">Jugar otra vez</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="screen hidden">
+    <div class="spinner"></div>
+    <div>Cargando...</div>
+  </div>
+
+  <!-- Rotate device overlay -->
+  <div id="rotateOverlay">
+    <div class="rotate-icon">📱</div>
+    <div class="rotate-text">Gira tu teléfono de forma horizontal para poder jugar</div>
+  </div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti"></canvas>
+
+  <canvas id="game"></canvas>
+
   <script type="module" src="main.js"></script>
-  <script src="modal.js"></script>
 </body>
 </html>
