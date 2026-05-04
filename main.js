@@ -96,7 +96,7 @@ let marcoTriangles = []; // Array of {a, b, c, normal} in world space
 let playerMixer, playerAction;
 let stadiumMixer = null;
 let stadiumGenteAction = null;
-let stadiumCameraAnim = null;
+let stadiumCameraAction = null;
 let stadiumCamera = null;
 let ballRadius = 0.12;
 
@@ -190,7 +190,7 @@ async function loadAssets() {
   stadium = stadiumGltf.scene;
   scene.add(stadium);
 
-  // Setup stadium animations - find 'gente' clip and 'CameraAnim' clip
+  // Setup stadium animations - find 'gente' clip
   if (stadiumGltf.animations && stadiumGltf.animations.length) {
     stadiumMixer = new THREE.AnimationMixer(stadium);
     const genteClip = stadiumGltf.animations.find(c => /gente/i.test(c.name));
@@ -202,11 +202,12 @@ async function loadAssets() {
       stadiumGenteAction.timeScale = 0.05;
       stadiumGenteAction.play();
     }
-    const cameraAnimClip = stadiumGltf.animations.find(c => /CameraAnim/i.test(c.name) || /camera/i.test(c.name));
-    if (cameraAnimClip) {
-      stadiumCameraAnim = stadiumMixer.clipAction(cameraAnimClip);
-      stadiumCameraAnim.setLoop(THREE.LoopOnce, 1);
-      stadiumCameraAnim.clampWhenFinished = true;
+    // Setup CameraAnim clip (targets the 'Camera' object)
+    const cameraClip = stadiumGltf.animations.find(c => /CameraAnim/i.test(c.name));
+    if (cameraClip) {
+      stadiumCameraAction = stadiumMixer.clipAction(cameraClip);
+      stadiumCameraAction.setLoop(THREE.LoopOnce, 1);
+      stadiumCameraAction.clampWhenFinished = true;
     }
   }
   stadium.traverse(o => {
@@ -506,7 +507,17 @@ function startGame() {
   // Get user name from input
   const inputName = playerNameInput.value.trim();
   playerName = inputName || 'Jugador';
-
+  
+  // Reset all audio elements to ensure they play from start
+  const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
+  allAudios.forEach(audio => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.load(); // Reload for mobile compatibility
+    }
+  });
+  
   state.shots = 0;
   state.goals = 0;
   state.playing = true;
@@ -514,21 +525,26 @@ function startGame() {
   hud.classList.remove('hidden');
   endScreen.classList.add('hidden');
   splash.classList.add('hidden');
-  // Request fullscreen on mobile landscape
-  if (window.innerHeight <= 500 && window.innerWidth > window.innerHeight) {
-    requestFullscreen();
-  }
-  // Play CameraAnim animation at game start
-  if (stadiumCameraAnim) {
-    stadiumCameraAnim.reset();
-    stadiumCameraAnim.play();
+  // Play CameraAnim animation on stadium Camera object (always from start)
+  if (stadiumCameraAction) {
+    stadiumCameraAction.stop();
+    stadiumCameraAction.reset();
+    stadiumCameraAction.time = 0;
+    stadiumCameraAction.paused = false;
+    stadiumCameraAction.enabled = true;
+    stadiumCameraAction.play();
+    if (stadiumMixer) stadiumMixer.update(0);
   }
   // Play start whistle sound first
   if (silbStart) {
     silbStart.volume = 1.0;
-    silbStart.play().catch(e => console.log('SilbStart play failed:', e));
+    // iOS requires a small delay after user interaction for audio to play smoothly
+    setTimeout(() => {
+      silbStart.play().catch(e => console.log('SilbStart play failed:', e));
+    }, 50);
   }
-  // Play background music after a short delay
+  // Play background music after a short delay (longer for iOS)
+  const musicDelay = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 800 : 400;
   setTimeout(() => {
     if (bgMusic) {
       bgMusic.volume = .7;
@@ -537,9 +553,11 @@ function startGame() {
     // Play ruidoG audio after music starts
     if (ruidoG) {
       ruidoG.volume = 0.3;
-      ruidoG.play().catch(e => console.log('RuidoG play failed:', e));
+      setTimeout(() => {
+        ruidoG.play().catch(e => console.log('RuidoG play failed:', e));
+      }, 100);
     }
-  }, 400);
+  }, musicDelay);
   resetBall();
   instructionsEl.classList.remove('hide');
   swipePointerEl.classList.remove('hide');
@@ -547,17 +565,6 @@ function startGame() {
   swipePointerRightEl.classList.remove('hide');
   // Reset goalkeeper to idle animation
   returnReyToIdle();
-}
-
-function requestFullscreen() {
-  const doc = document.documentElement;
-  if (doc.requestFullscreen) {
-    doc.requestFullscreen();
-  } else if (doc.webkitRequestFullscreen) {
-    doc.webkitRequestFullscreen();
-  } else if (doc.msRequestFullscreen) {
-    doc.msRequestFullscreen();
-  }
 }
 
 function endGame() {
@@ -569,39 +576,23 @@ function endGame() {
   // Play end whistle sound
   if (silbEnd) {
     silbEnd.volume = 1.0;
-    silbEnd.play().catch(e => console.log('SilbEnd play failed:', e));
-  }
-  // Fade out music and ruidoG over 2 seconds
-  const fadeOutDuration = 2000;
-  const fadeInterval = 50;
-  const steps = fadeOutDuration / fadeInterval;
-  let currentStep = 0;
-  
-  const fadeIntervalId = setInterval(() => {
-    currentStep++;
-    const progress = currentStep / steps;
-    const newVolume = Math.max(0, 1 - progress);
-    
-    if (bgMusic) bgMusic.volume = newVolume;
-    if (ruidoG) ruidoG.volume = newVolume * 0.5;
-    
-    if (currentStep >= steps) {
-      clearInterval(fadeIntervalId);
-      if (bgMusic) bgMusic.pause();
-      if (ruidoG) ruidoG.pause();
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isIOS) {
+      setTimeout(() => silbEnd.play().catch(e => console.log('SilbEnd play failed:', e)), 30);
+    } else {
+      silbEnd.play().catch(e => console.log('SilbEnd play failed:', e));
     }
-  }, fadeInterval);
+  }
+  // Stop music and ruidoG immediately
+  if (bgMusic) bgMusic.pause();
+  if (ruidoG) ruidoG.pause();
   
   if (state.goals >= state.goalThreshold) {
     endTitle.textContent = '¡GANASTE!';
     endTitle.className = 'win';
-    endPlayerName.classList.add('win');
-    btnScreenshot.style.display = '';
   } else {
     endTitle.textContent = 'INTENTAR NUEVAMENTE';
     endTitle.className = 'lose';
-    endPlayerName.classList.remove('win');
-    btnScreenshot.style.display = 'none';
   }
   endScoreEl.textContent = `${state.goals} / ${state.maxShots} GOLES`;
 }
@@ -764,7 +755,13 @@ function launchBallPhysics(targetX, targetY) {
   if (kickSound) {
     kickSound.volume = 1;
     kickSound.currentTime = 0;
-    kickSound.play().catch(e => console.log('Kick sound play failed:', e));
+    // iOS requires small delay for audio to play smoothly
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isIOS) {
+      setTimeout(() => kickSound.play().catch(e => console.log('Kick sound play failed:', e)), 30);
+    } else {
+      kickSound.play().catch(e => console.log('Kick sound play failed:', e));
+    }
   }
 
   // Trigger goalkeeper dive: pick animation that matches ball direction (with some chance)
@@ -815,7 +812,7 @@ function spawnConfetti() {
   for (let i = 0; i < confetti.spawnCount; i++) {
     confetti.particles.push({
       x: window.innerWidth / 2,
-      y: window.innerHeight / 2.5,
+      y: window.innerHeight * 0.6,
       vx: (Math.random() - 0.5) * 20,
       vy: (Math.random() - 1) * 15 - 5,
       size: Math.random() * 8 + 4,
@@ -1291,7 +1288,12 @@ function integrateBall(dt) {
         if (kickSound) {
           kickSound.volume = 0.6;
           kickSound.currentTime = 0;
-          kickSound.play().catch(e => console.log('Kick sound play failed:', e));
+          const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (isIOS) {
+            setTimeout(() => kickSound.play().catch(e => console.log('Kick sound play failed:', e)), 30);
+          } else {
+            kickSound.play().catch(e => console.log('Kick sound play failed:', e));
+          }
         }
       }
       const speed = state._ballVel.length();
@@ -1451,13 +1453,20 @@ function finishShot(isGoal) {
   if (isSave) { label = 'ATAJADA'; cls = 'miss'; }
   else if (realGoal) { label = '¡GOL!'; cls = 'goal'; }
   else { label = 'FALLASTE'; cls = 'miss'; }
-  showMessage(label, cls, 1200);
+  // GOL stays 1 second longer (2200ms vs 1200ms)
+  const messageDuration = realGoal ? 2200 : 1200;
+  showMessage(label, cls, messageDuration);
   // Play abu sound when shot is missed
   if (!isSave && !realGoal) {
     if (abuSound) {
       abuSound.volume = 1;
       abuSound.currentTime = 0;
-      abuSound.play().catch(e => console.log('Abu sound play failed:', e));
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isIOS) {
+        setTimeout(() => abuSound.play().catch(e => console.log('Abu sound play failed:', e)), 30);
+      } else {
+        abuSound.play().catch(e => console.log('Abu sound play failed:', e));
+      }
     }
   }
   if (realGoal) {
@@ -1465,7 +1474,12 @@ function finishShot(isGoal) {
     if (golSound) {
       golSound.volume = 1;
       golSound.currentTime = 0;
-      golSound.play().catch(e => console.log('Gol sound play failed:', e));
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isIOS) {
+        setTimeout(() => golSound.play().catch(e => console.log('Gol sound play failed:', e)), 30);
+      } else {
+        golSound.play().catch(e => console.log('Gol sound play failed:', e));
+      }
     }
     spawnConfetti();
     // Play stadium 'gente' (crowd) animation at normal speed for goal celebration
@@ -1473,16 +1487,18 @@ function finishShot(isGoal) {
       stadiumGenteAction.timeScale = 1.0; // Normal speed for goal
       stadiumGenteAction.reset();
       stadiumGenteAction.play();
-      // Return to slow speed after 2 seconds
+      // Return to slow speed after 3 seconds (1 second longer for GOL)
       setTimeout(() => {
         if (stadiumGenteAction) {
           stadiumGenteAction.timeScale = 0.05; // Very slow speed again
         }
-      }, 2000);
+      }, 3000);
     }
   }
   updateHUD();
 
+  // Adjust reset timeout: 2400ms for GOL (1 second longer), 1400ms for others
+  const resetTimeout = realGoal ? 2400 : 1400;
   setTimeout(() => {
     kickInProgress = false;
     if (state.shots >= state.maxShots) {
@@ -1505,7 +1521,7 @@ function finishShot(isGoal) {
       swipePointerLeftEl.classList.remove('hide');
       swipePointerRightEl.classList.remove('hide');
     }
-  }, 1400);
+  }, resetTimeout);
 }
 
 // ---------- Input (swipe / drag) ----------
@@ -1565,6 +1581,31 @@ window.addEventListener('resize', onResize);
 onResize();
 resizeConfetti();
 
+// ---------- Page Visibility API - Pause/Resume Audio ----------
+let wasPlaying = {}; // Track which audios were playing before page was hidden
+
+document.addEventListener('visibilitychange', () => {
+  const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
+  
+  if (document.hidden) {
+    // Page is hidden - pause all audio and track which were playing
+    allAudios.forEach(audio => {
+      if (audio) {
+        wasPlaying[audio.id] = !audio.paused && audio.currentTime > 0;
+        audio.pause();
+      }
+    });
+  } else {
+    // Page is visible again - resume audio that was playing
+    allAudios.forEach(audio => {
+      if (audio && wasPlaying[audio.id] && state.playing) {
+        audio.play().catch(e => console.log('Audio resume failed:', e));
+      }
+    });
+    wasPlaying = {};
+  }
+});
+
 // ---------- Main loop ----------
 function animate() {
   requestAnimationFrame(animate);
@@ -1589,39 +1630,20 @@ btnStart.addEventListener('click', async () => {
     loading.classList.remove('hidden');
     try {
       await loadAssets();
-    } catch (e) {
-      console.error('Error loading assets:', e);
+    } catch (err) {
+      console.error('Error cargando assets', err);
+      alert('Error cargando assets: ' + err.message);
+      btnStart.disabled = false;
       loading.classList.add('hidden');
       return;
     }
     loading.classList.add('hidden');
     onResize();
   }
-  // Unlock audio context on iOS
-  const audioElements = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
-  audioElements.forEach(audio => {
-    if (audio) {
-      audio.load();
-    }
-  });
   startGame();
 });
 
 btnRestart.addEventListener('click', () => {
-  // Reset all audio elements
-  const audioElements = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
-  audioElements.forEach(audio => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = audio === bgMusic ? 0.8 : audio === ruidoG ? 0.3 : 1.0;
-    }
-  });
-  // Play CameraAnim animation on restart
-  if (stadiumCameraAnim) {
-    stadiumCameraAnim.reset();
-    stadiumCameraAnim.play();
-  }
   startGame();
 });
 

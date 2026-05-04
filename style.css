@@ -1,16 +1,5 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #000;
-  font-family: 'Arial Black', Arial, sans-serif;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  padding: 0;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-}
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', Arial, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
 
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
@@ -103,7 +92,7 @@ html, body {
 
 #message {
   position: absolute;
-  top: 30%; left: 50%;
+  top: 60%; left: 50%;
   transform: translate(-50%, -50%) scale(0.5);
   font-size: clamp(80px, 18vw, 192px);
   color: #fff;
@@ -119,7 +108,7 @@ html, body {
 
 #instructions {
   position: absolute;
-  bottom: 45%;
+  bottom: 42%;
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
@@ -140,10 +129,6 @@ html, body {
   opacity: 0.9;
   animation: swipeAnim 1.5s ease-in-out infinite;
 }
-#swipePointer svg {
-  width: 60px;
-  height: 60px;
-}
 @keyframes swipeAnim {
   0%, 100% { transform: translateX(-50%) translateY(60px); opacity: 0.5; }
   50% { transform: translateX(-50%) translateY(-60px); opacity: 1; }
@@ -156,10 +141,6 @@ html, body {
   transform: translateX(-50%);
   opacity: 0.9;
   animation: swipeLeftAnim 1.5s ease-in-out infinite;
-}
-#swipePointerLeft svg {
-  width: 60px;
-  height: 60px;
 }
 @keyframes swipeLeftAnim {
   0%, 100% { transform: translateX(-50%) translate(60px, 60px); opacity: 0.5; }
@@ -174,10 +155,6 @@ html, body {
   opacity: 0.9;
   animation: swipeRightAnim 1.5s ease-in-out infinite;
 }
-#swipePointerRight svg {
-  width: 60px;
-  height: 60px;
-}
 @keyframes swipeRightAnim {
   0%, 100% { transform: translateX(-50%) translate(-60px, 60px); opacity: 0.5; }
   50% { transform: translateX(-50%) translate(60px, -60px); opacity: 1; }
@@ -189,7 +166,7 @@ html, body {
 #endScreen { background: rgba(0,0,0,0.85); }
 #endScreen.screenshot-transparent { background: transparent !important; }
 .end-player-name {
-  font-size: clamp(36px, 7.5vw, 54px);
+  font-size: clamp(24px, 5vw, 36px);
   color: #ffd54a;
   text-align: center;
   margin-bottom: 15px;
@@ -289,121 +266,25 @@ html, body {
   #rotateOverlay { display: flex; }
 }
 
-/* Mobile adjustments for landscape mode */
-@media (max-width: 768px) {
-  /* Reduce large text sizes on mobile */
-  .btn-main {
-    font-size: clamp(16px, 3.5vw, 28px);
-    padding: 14px 40px;
-  }
-  .name-input {
-    font-size: clamp(12px, 2.2vw, 16px);
-    padding: 10px 24px;
-    min-width: 160px;
-  }
-  #score {
-    font-size: clamp(28px, 5vw, 44px);
-  }
-  #message {
-    font-size: clamp(48px, 12vw, 120px);
-  }
-  #instructions {
-    font-size: clamp(20px, 2.5vw, 24px);
-  }
-  .end-player-name {
-    font-size: clamp(24px, 5vw, 36px);
-  }
-  #endTitle {
-    font-size: clamp(28px, 7vw, 80px);
-  }
-  #endTitle.lose {
-    font-size: clamp(24px, 5.5vw, 64px);
-  }
-  #endScore {
-    font-size: clamp(16px, 3vw, 28px);
-  }
-  .btn-secondary {
-    font-size: clamp(14px, 2.5vw, 20px);
-    padding: 12px 32px;
-  }
-  .rotate-text {
-    font-size: clamp(16px, 4vw, 24px);
-  }
-  /* Reduce swipe pointer sizes on mobile */
-  #swipePointer svg, #swipePointerLeft svg, #swipePointerRight svg {
-    width: 40px;
-    height: 40px;
-  }
-  #scoreBox {
-    padding: 8px 12px;
-    min-width: 90px;
-  }
+/* Mobile-only text size adjustments (landscape phones) */
+@media (max-width: 1200px) and (orientation: landscape) {
+  #message { font-size: clamp(40px, 10vw, 90px); letter-spacing: 2px; -webkit-text-stroke: 1px #000; }
+  #instructions { font-size: clamp(14px, 2.2vw, 18px); letter-spacing: 1px; }
+  #endTitle { font-size: clamp(28px, 7vw, 64px); -webkit-text-stroke: 2px #000; }
+  #endTitle.lose { font-size: clamp(22px, 5.5vw, 52px); }
+  .end-player-name { font-size: clamp(16px, 3.5vw, 24px); margin-bottom: 8px; }
+  #endScore { font-size: clamp(14px, 3vw, 22px); margin-bottom: 16px; }
+  .btn-main { font-size: clamp(14px, 3vw, 24px); padding: 12px 36px; margin-bottom: 4vh; }
+  .btn-secondary { font-size: clamp(12px, 2.5vw, 18px); padding: 10px 28px; }
+  .player-name { font-size: clamp(11px, 2vw, 14px); }
+  .score-label { font-size: clamp(10px, 1.6vw, 13px); }
+  #score { font-size: clamp(22px, 4.5vw, 36px); }
+  .shots-label { font-size: clamp(9px, 1.3vw, 12px); }
+  .name-input { font-size: clamp(11px, 2vw, 16px); padding: 8px 20px; min-width: 160px; bottom: 180px; }
+  #swipePointer, #swipePointerLeft, #swipePointerRight { transform: scale(0.5); }
 }
 
-/* Mobile landscape mode specific adjustments */
-@media (max-height: 500px) and (orientation: landscape) {
-  .btn-main {
-    font-size: clamp(14px, 3vw, 24px);
-    padding: 10px 32px;
-    margin-bottom: 4vh;
-  }
-  .name-input {
-    font-size: clamp(11px, 2vw, 14px);
-    padding: 8px 20px;
-    min-width: 140px;
-    bottom: 180px;
-  }
-  #score {
-    font-size: clamp(24px, 4vw, 36px);
-  }
-  .player-name {
-    font-size: clamp(12px, 2vw, 14px);
-  }
-  .score-label {
-    font-size: clamp(10px, 1.5vw, 12px);
-  }
-  .shots-label {
-    font-size: clamp(10px, 1.4vw, 12px);
-  }
-  #message {
-    font-size: clamp(36px, 8vw, 80px);
-  }
-  #instructions {
-    font-size: clamp(16px, 2vw, 20px);
-    bottom: 40%;
-  }
-  .end-player-name {
-    font-size: clamp(20px, 4vw, 28px);
-    margin-bottom: 10px;
-  }
-  #endTitle {
-    font-size: clamp(24px, 5vw, 56px);
-    margin-bottom: 12px;
-  }
-  #endTitle.lose {
-    font-size: clamp(20px, 4vw, 44px);
-  }
-  #endScore {
-    font-size: clamp(14px, 2.5vw, 22px);
-    margin-bottom: 20px;
-  }
-  .btn-secondary {
-    font-size: clamp(12px, 2vw, 18px);
-    padding: 10px 28px;
-    margin: 0 0 12px 0;
-  }
-  #scoreBox {
-    padding: 6px 10px;
-    min-width: 80px;
-    top: 12px;
-    left: 12px;
-  }
-  /* Reduce swipe pointers in landscape */
-  #swipePointer svg, #swipePointerLeft svg, #swipePointerRight svg {
-    width: 32px;
-    height: 32px;
-  }
-  #swipePointer, #swipePointerLeft, #swipePointerRight {
-    bottom: 30%;
-  }
+/* iOS-specific arrow scaling */
+@supports (-webkit-touch-callout: none) and (orientation: landscape) {
+  #swipePointer, #swipePointerLeft, #swipePointerRight { transform: scale(0.5) !important; }
 }
