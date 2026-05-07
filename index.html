@@ -3,30 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Gánale al Rey</title>
-  <link rel="icon" href="assets/im/soccer.svg">
-  <link rel="stylesheet" href="style.css" />
-  <audio id="bgMusic" loop preload="auto" playsinline>
-    <source src="assets/sound/music/guanteySom.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="ruidoG" loop preload="auto" playsinline>
-    <source src="assets/sound/ruidog.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="silbStart" preload="auto" playsinline>
-    <source src="assets/sound/silb.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="silbEnd" preload="auto" playsinline>
-    <source src="assets/sound/silbfin.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="kickSound" preload="auto" playsinline>
-    <source src="assets/sound/kick.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="golSound" preload="auto" playsinline>
-    <source src="assets/sound/gol.mp3" type="audio/mpeg">
-  </audio>
-  <audio id="abuSound" preload="auto" playsinline>
-    <source src="assets/sound/abu.mp3" type="audio/mpeg">
-  </audio>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Rey AR</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- three.js via importmap (no build step) -->
   <script type="importmap">
   {
     "imports": {
@@ -35,74 +17,48 @@
     }
   }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- 8th Wall Engine Binary (open source, sin app key, Android + iOS Safari) -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/xrextras@1/dist/xrextras.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
+
+  <!-- MediaPipe Tasks Vision se importa como modulo ES dentro de ar.js -->
 </head>
 <body>
   <!-- Splash -->
-  <div id="splash" class="screen">
-    <img id="portada" src="assets/im/portadaJuego.png" alt="Portada" />
-    <input type="text" id="playerName" placeholder="Escribe tu nombre aquí" class="name-input" maxlength="20" />
-    <button id="btnStart" class="btn-main">COMENZAR</button>
-  </div>
+  <section id="splash" class="screen">
+    <img id="splash-img" src="assets/im/splash.jpg" alt="Splash" />
+    <button id="btn-start">Comenzar</button>
+  </section>
 
-  <!-- HUD -->
-  <div id="hud" class="hidden">
-    <div id="scoreBox">
-      <div class="player-name" id="playerNameDisplay">Jugador</div>
-      <div class="score-label">GOLES</div>
-      <div id="score">0</div>
-      <div class="shots-label">TIRO <span id="shotNum">1</span>/10</div>
+  <!-- No-mobile -->
+  <section id="no-mobile" class="screen hidden">
+    <p>Esta funcion solo esta disponible en dispositivos moviles</p>
+  </section>
+
+  <!-- AR overlay -->
+  <section id="ar-overlay" class="hidden">
+    <div id="mode-label">Selfie del REY</div>
+    <div id="hint">Selfie del REY — apunta tu cara a la cámara</div>
+    <button id="btn-exit">Salir</button>
+    <button id="btn-switch">🌍 Modo RA</button>
+    <button id="btn-photo" aria-label="Tomar foto"></button>
+  </section>
+
+  <!-- Photo preview (after capture) -->
+  <section id="photo-preview" class="screen hidden">
+    <img id="photo-img" alt="Foto" />
+    <div class="photo-actions">
+      <a id="photo-download" download="rey-ar.jpg">Descargar</a>
+      <button id="photo-close">Cerrar</button>
     </div>
-    <div id="message"></div>
-    <div id="instructions">Desliza para patear</div>
-    <div id="swipePointerLeft">
-      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M50 50L10 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
-        <path d="M22 22L10 10L22 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M10 10L10 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div id="swipePointer">
-      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M30 50L30 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
-        <path d="M20 20L30 10L40 20" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div id="swipePointerRight">
-      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 50L50 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
-        <path d="M38 22L50 10L38 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M50 10L50 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-  </div>
+  </section>
 
-  <!-- End screen -->
-  <div id="endScreen" class="screen hidden">
-    <div class="end-player-name" id="endPlayerName">Jugador</div>
-    <div id="endTitle"></div>
-    <div id="endScore"></div>
-    <button id="btnScreenshot" class="btn-secondary">CAPTURAR PANTALLA</button>
-    <button id="btnRestart" class="btn-main">JUGAR DE NUEVO</button>
-  </div>
 
-  <!-- Loading -->
-  <div id="loading" class="screen hidden">
-    <div class="spinner"></div>
-    <div>Cargando...</div>
-  </div>
+  <!-- Camera feed canvas (usado por 8th Wall) -->
+  <canvas id="camerafeed" class="hidden"></canvas>
 
-  <!-- Rotate device overlay -->
-  <div id="rotateOverlay">
-    <div class="rotate-icon">📱</div>
-    <div class="rotate-text">Gira tu teléfono de forma horizontal para poder jugar</div>
-  </div>
-
-  <!-- Confetti canvas -->
-  <canvas id="confetti"></canvas>
-
-  <canvas id="game"></canvas>
-
-  <script type="module" src="main.js"></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
