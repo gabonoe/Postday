@@ -29,15 +29,23 @@ const endScreen = document.getElementById('endScreen');
 const endPlayerName = document.getElementById('endPlayerName');
 const endTitle = document.getElementById('endTitle');
 const endScoreEl = document.getElementById('endScore');
+const endWinImage = document.getElementById('endWinImage');
+const endLoseImage = document.getElementById('endLoseImage');
+const endLoseMessage = document.getElementById('endLoseMessage');
 const btnScreenshot = document.getElementById('btnScreenshot');
 const btnRestart = document.getElementById('btnRestart');
+const btnHome = document.getElementById('btnHome');
+const btnAudio = document.getElementById('btnAudio');
+const btnExit = document.getElementById('btnExit');
 const loading = document.getElementById('loading');
 const canvas = document.getElementById('game');
 const confettiCanvas = document.getElementById('confetti');
 const confettiCtx = confettiCanvas.getContext('2d');
 
 // ---------- THREE Setup ----------
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// Higher pixel ratio for better rendering quality during zoom
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -59,9 +67,9 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 3);
 sun.position.set(-5, 8, 11);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.bias = -0.0005;
-sun.shadow.normalBias = 0.02;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.bias = -0.0001;
+sun.shadow.normalBias = 0.05;
 sun.shadow.camera.near = 0.5;
 sun.shadow.camera.far = 50;
 sun.shadow.camera.left = -15;
@@ -120,6 +128,19 @@ const camShake = {
   duration: 0.45,             // total shake duration
   amplitude: 0.06,            // peak displacement (world units)
   seed: Math.random() * 1000,
+};
+
+// Camera zoom for goal shots
+const camZoom = {
+  baseFov: null,              // original FOV captured on first use
+  currentFov: null,           // current FOV
+  targetFov: null,            // target FOV to lerp toward
+  zoomFactor: 0.80,           // 80% of base FOV (20% closer)
+  baseY: null,                // original camera Y captured on first use
+  currentY: null,             // current Y
+  targetY: null,              // target Y to lerp toward
+  yOffset: 0.4,               // amount to raise the camera when zoomed
+  speed: 3,                   // lerp speed (per second)
 };
 
 // Confetti system
@@ -181,10 +202,21 @@ function loadGLTF(url) {
 }
 
 async function loadAssets() {
-  const [stadiumGltf, playerGltf] = await Promise.all([
-    loadGLTF('assets/3D/estadio.glb'),
-    loadGLTF('assets/3D/player.glb'),
-  ]);
+  // Load assets sequentially for mobile to prevent freezing
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  let stadiumGltf, playerGltf;
+
+  if (isMobile) {
+    // Sequential loading for mobile
+    stadiumGltf = await loadGLTF('assets/3D/estadio.glb');
+    playerGltf = await loadGLTF('assets/3D/player.glb');
+  } else {
+    // Parallel loading for desktop
+    [stadiumGltf, playerGltf] = await Promise.all([
+      loadGLTF('assets/3D/estadio.glb'),
+      loadGLTF('assets/3D/player.glb'),
+    ]);
+  }
 
   // Stadium
   stadium = stadiumGltf.scene;
@@ -380,7 +412,14 @@ async function loadAssets() {
     rey = reyGltf.scene;
     scene.add(rey);
     rey.traverse(o => {
-      if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+        // Fix shadow artifacts between hat and head by preventing hat from casting shadows
+        if (o.name === 'Rsombrero') {
+          o.castShadow = false;
+        }
+      }
     });
     if (reyGltf.animations && reyGltf.animations.length) {
       reyMixer = new THREE.AnimationMixer(rey);
@@ -474,9 +513,11 @@ async function loadAssets() {
 
 // ---------- Game flow ----------
 function showMessage(text, cls = '', duration = 1200) {
+  messageEl.classList.remove('show');
+  // Force reflow so the browser resets the transition before showing new message
+  void messageEl.offsetWidth;
   messageEl.textContent = text;
-  messageEl.className = '';
-  if (cls) messageEl.classList.add(cls);
+  messageEl.className = cls ? cls : '';
   messageEl.classList.add('show');
   if (duration > 0) {
     setTimeout(() => messageEl.classList.remove('show'), duration);
@@ -500,6 +541,13 @@ function resetBall() {
   if (stadiumGenteAction) {
     stadiumGenteAction.timeScale = 0.05;
   }
+  // Restore camera FOV and Y to original
+  if (camZoom.baseFov !== null) {
+    camZoom.targetFov = camZoom.baseFov;
+  }
+  if (camZoom.baseY !== null) {
+    camZoom.targetY = camZoom.baseY;
+  }
   startBallFadeIn();
 }
 
@@ -509,14 +557,19 @@ function startGame() {
   playerName = inputName || 'Jugador';
   
   // Reset all audio elements to ensure they play from start
-  const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
+  // kickSound excluded from load() to avoid decode delay on mobile
+  const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, golSound, abuSound];
   allAudios.forEach(audio => {
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
-      audio.load(); // Reload for mobile compatibility
+      audio.load();
     }
   });
+  if (kickSound) {
+    kickSound.pause();
+    kickSound.currentTime = 0;
+  }
   
   state.shots = 0;
   state.goals = 0;
@@ -535,29 +588,6 @@ function startGame() {
     stadiumCameraAction.play();
     if (stadiumMixer) stadiumMixer.update(0);
   }
-  // Play start whistle sound first
-  if (silbStart) {
-    silbStart.volume = 1.0;
-    // iOS requires a small delay after user interaction for audio to play smoothly
-    setTimeout(() => {
-      silbStart.play().catch(e => console.log('SilbStart play failed:', e));
-    }, 50);
-  }
-  // Play background music after a short delay (longer for iOS)
-  const musicDelay = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 800 : 400;
-  setTimeout(() => {
-    if (bgMusic) {
-      bgMusic.volume = .6;
-      bgMusic.play().catch(e => console.log('Audio play failed:', e));
-    }
-    // Play ruidoG audio after music starts
-    if (ruidoG) {
-      ruidoG.volume = 0.2;
-      setTimeout(() => {
-        ruidoG.play().catch(e => console.log('RuidoG play failed:', e));
-      }, 100);
-    }
-  }, musicDelay);
   resetBall();
   instructionsEl.classList.remove('hide');
   swipePointerEl.classList.remove('hide');
@@ -565,6 +595,32 @@ function startGame() {
   swipePointerRightEl.classList.remove('hide');
   // Reset goalkeeper to idle animation
   returnReyToIdle();
+
+  // Delay audio playback until scene is rendered (longer delay for mobile)
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const audioStartDelay = isMobile ? 1500 : 300;
+
+  setTimeout(() => {
+    // Play start whistle sound first
+    if (silbStart) {
+      silbStart.volume = 1.0;
+      silbStart.play().catch(e => console.log('SilbStart play failed:', e));
+    }
+    // Play background music after a short delay
+    setTimeout(() => {
+      if (bgMusic) {
+        bgMusic.volume = .6;
+        bgMusic.play().catch(e => console.log('Audio play failed:', e));
+      }
+      // Play ruidoG audio after music starts
+      if (ruidoG) {
+        ruidoG.volume = 0.2;
+        setTimeout(() => {
+          ruidoG.play().catch(e => console.log('RuidoG play failed:', e));
+        }, 100);
+      }
+    }, isMobile ? 400 : 200);
+  }, audioStartDelay);
 }
 
 function endGame() {
@@ -590,9 +646,18 @@ function endGame() {
   if (state.goals >= state.goalThreshold) {
     endTitle.textContent = '¡GANASTE!';
     endTitle.className = 'win';
+    endWinImage.classList.remove('hidden');
+    endLoseImage.classList.add('hidden');
+    endLoseMessage.classList.add('hidden');
+    btnScreenshot.classList.remove('hidden');
+    spawnEndConfetti();
   } else {
-    endTitle.textContent = 'INTENTAR NUEVAMENTE';
+    endTitle.textContent = 'INTENTA NUEVAMENTE';
     endTitle.className = 'lose';
+    endWinImage.classList.add('hidden');
+    endLoseImage.classList.remove('hidden');
+    endLoseMessage.classList.remove('hidden');
+    btnScreenshot.classList.add('hidden');
   }
   endScoreEl.textContent = `${state.goals} / ${state.maxShots} GOLES`;
 }
@@ -639,18 +704,45 @@ function captureScreenshot() {
       // Draw the endScreen overlay on top
       tempCtx.drawImage(endScreenCanvas, 0, 0, gameCanvas.width, gameCanvas.height);
       
-      // Get the combined data URL
-      const dataURL = tempCanvas.toDataURL('image/png');
-      
-      // Create a link element for download
-      const link = document.createElement('a');
-      link.download = `penales_${playerName}_${state.goals}goles.png`;
-      link.href = dataURL;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const fileName = `penales_${playerName}_${state.goals}goles.png`;
+
+      // On mobile use Web Share API so user can save to Photos
+      if (navigator.share && navigator.canShare) {
+        tempCanvas.toBlob(async (blob) => {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: '¡Gánale al Rey!', text: `${playerName} anotó ${state.goals} goles` });
+            } catch (err) {
+              if (err.name !== 'AbortError') {
+                // User cancelled or share failed, fallback to download
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = tempCanvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            }
+          } else {
+            // canShare returned false, fallback
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = tempCanvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        }, 'image/png');
+      } else {
+        // Desktop fallback: trigger download
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = tempCanvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }).catch(e => {
       console.error('html2canvas capture failed:', e);
       endScreen.classList.remove('screenshot-transparent');
@@ -751,15 +843,12 @@ function launchBallPhysics(targetX, targetY) {
   state._goalTime = null;
   state.ballMoving = true;
   
-  // Play kick sound when ball simulation starts
-  if (kickSound) {
-    kickSound.volume = 1;
-    kickSound.currentTime = 0;
-    // iOS requires small delay for audio to play smoothly
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isIOS) {
-      setTimeout(() => kickSound.play().catch(e => console.log('Kick sound play failed:', e)), 30);
-    } else {
+  // Play kick sound when ball simulation starts (Web Audio for low latency)
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (!playKickWebAudio(1)) {
+    if (kickSound) {
+      kickSound.volume = 1;
+      kickSound.currentTime = 0;
       kickSound.play().catch(e => console.log('Kick sound play failed:', e));
     }
   }
@@ -768,15 +857,28 @@ function launchBallPhysics(targetX, targetY) {
   triggerReyDive(targetX, targetY);
 
   // Light camera shake for dynamism
-  startCameraShake(0.25, 0.04);
+  startCameraShake(0.35, 0.09);
+
+  // Trigger slight camera zoom toward goal
+  if (camera && camera.isPerspectiveCamera) {
+    if (camZoom.baseFov === null) {
+      camZoom.baseFov = camera.fov;
+      camZoom.currentFov = camera.fov;
+    }
+    if (camZoom.baseY === null) {
+      camZoom.baseY = camera.position.y;
+      camZoom.currentY = camera.position.y;
+    }
+    camZoom.targetFov = camZoom.baseFov * camZoom.zoomFactor;
+    camZoom.targetY = camZoom.baseY + camZoom.yOffset;
+  }
 }
 
 function startCameraShake(duration = 0.4, amplitude = 0.05) {
   if (!camera) return;
-  if (!camShake.hasBase) {
-    camShake.base.copy(camera.position);
-    camShake.hasBase = true;
-  }
+  // Always refresh base from current camera position so shake is always correct
+  camShake.base.copy(camera.position);
+  camShake.hasBase = true;
   camShake.duration = duration;
   camShake.time = duration;
   camShake.amplitude = amplitude;
@@ -812,9 +914,32 @@ function spawnConfetti() {
   for (let i = 0; i < confetti.spawnCount; i++) {
     confetti.particles.push({
       x: window.innerWidth / 2,
-      y: window.innerHeight * 0.6,
+      y: window.innerHeight * 0.7,
       vx: (Math.random() - 0.5) * 20,
       vy: (Math.random() - 1) * 15 - 5,
+      size: Math.random() * 8 + 4,
+      color: confetti.colors[Math.floor(Math.random() * confetti.colors.length)],
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() - 0.5) * 0.3,
+      drag: Math.random() * 0.02 + 0.02,
+      gravity: 0.25 + Math.random() * 0.15,
+      life: 1,
+      decay: Math.random() * 0.01 + 0.005,
+    });
+  }
+}
+
+function spawnEndConfetti() {
+  confetti.particles = [];
+  confetti.active = true;
+  for (let i = 0; i < confetti.spawnCount; i++) {
+    const isLeft = i % 2 === 0;
+    const x = isLeft ? window.innerWidth * 0.2 : window.innerWidth * 0.8;
+    confetti.particles.push({
+      x: x,
+      y: window.innerHeight * 0.1,
+      vx: (Math.random() - 0.5) * 15 + (isLeft ? 5 : -5),
+      vy: Math.random() * 10 + 5,
       size: Math.random() * 8 + 4,
       color: confetti.colors[Math.floor(Math.random() * confetti.colors.length)],
       rotation: Math.random() * Math.PI * 2,
@@ -1284,14 +1409,11 @@ function integrateBall(dt) {
       if (!state._saved) {
         state._saveTime = state._timeAlive;
         state._saved = true;
-        // Play kick sound when goalkeeper saves
-        if (kickSound) {
-          kickSound.volume = 0.6;
-          kickSound.currentTime = 0;
-          const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-          if (isIOS) {
-            setTimeout(() => kickSound.play().catch(e => console.log('Kick sound play failed:', e)), 30);
-          } else {
+        // Play kick sound when goalkeeper saves (Web Audio for low latency)
+        if (!playKickWebAudio(0.6)) {
+          if (kickSound) {
+            kickSound.volume = 0.6;
+            kickSound.currentTime = 0;
             kickSound.play().catch(e => console.log('Kick sound play failed:', e));
           }
         }
@@ -1616,27 +1738,67 @@ function animate() {
   updateBallPhysics(dt);
   updateNetCloth(dt);
   updateCameraShake(dt);
+  updateCameraZoom(dt);
   updateConfetti(dt);
   updatePlayerFade(dt);
   updateBallFade(dt);
   renderer.render(scene, camera);
+}
+
+function updateCameraZoom(dt) {
+  if (!camera || !camera.isPerspectiveCamera) return;
+  // Lerp FOV
+  if (camZoom.targetFov !== null && camZoom.currentFov !== null) {
+    const diff = camZoom.targetFov - camZoom.currentFov;
+    if (Math.abs(diff) < 0.01) {
+      camZoom.currentFov = camZoom.targetFov;
+    } else {
+      camZoom.currentFov += diff * Math.min(1, camZoom.speed * dt);
+    }
+    camera.fov = camZoom.currentFov;
+    camera.updateProjectionMatrix();
+  }
+  // Lerp Y position
+  if (camZoom.targetY !== null && camZoom.currentY !== null) {
+    const diffY = camZoom.targetY - camZoom.currentY;
+    if (Math.abs(diffY) < 0.001) {
+      camZoom.currentY = camZoom.targetY;
+    } else {
+      camZoom.currentY += diffY * Math.min(1, camZoom.speed * dt);
+    }
+    camera.position.y = camZoom.currentY;
+    // Keep shake base in sync so shake oscillates around new Y
+    if (camShake.hasBase) camShake.base.y = camZoom.currentY;
+  }
 }
 animate();
 
 // ---------- Buttons ----------
 btnStart.addEventListener('click', async () => {
   btnStart.disabled = true;
-  // Unlock audio context for mobile Chrome by playing and immediately pausing all audio
-  const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
-  allAudios.forEach(audio => {
-    if (audio) {
-      audio.play().then(() => {
-        audio.pause();
-      }).catch(e => {
-        // Ignore errors - audio might already be unlocked or not ready
-      });
-    }
-  });
+  // Create and unlock AudioContext synchronously within user gesture (required by Chrome mobile)
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  // Unlock HTML5 Audio on mobile silently (muted)
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    const allAudios = [bgMusic, ruidoG, silbStart, silbEnd, kickSound, golSound, abuSound];
+    allAudios.forEach(audio => {
+      if (audio) {
+        audio.muted = true;
+        const p = audio.play();
+        if (p && p.then) {
+          p.then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            setTimeout(() => { audio.muted = false; }, 100);
+          }).catch(() => {
+            audio.muted = false;
+          });
+        }
+      }
+    });
+  }
   if (!state.loaded) {
     loading.classList.remove('hidden');
     try {
@@ -1650,14 +1812,105 @@ btnStart.addEventListener('click', async () => {
     }
     loading.classList.add('hidden');
     onResize();
+    // Load kick sound into Web Audio buffer for zero-latency playback
+    await loadKickBuffer();
   }
   startGame();
 });
 
 btnRestart.addEventListener('click', () => {
-  startGame();
+  endScreen.classList.add('hidden');
+  splash.classList.remove('hidden');
+  btnStart.disabled = false;
+  playerNameInput.value = '';
+});
+
+btnHome.addEventListener('click', () => {
+  endScreen.classList.add('hidden');
+  splash.classList.remove('hidden');
+  btnStart.disabled = false;
+  playerNameInput.value = '';
 });
 
 btnScreenshot.addEventListener('click', () => {
   captureScreenshot();
+});
+
+// Audio toggle button
+// Web Audio API for low-latency kick sound
+let audioCtx = null;
+let kickBuffer = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+async function loadKickBuffer() {
+  try {
+    const ctx = getAudioCtx();
+    const response = await fetch('assets/sound/kick.mp3');
+    const arrayBuffer = await response.arrayBuffer();
+    kickBuffer = await ctx.decodeAudioData(arrayBuffer);
+  } catch (e) {
+    console.log('Web Audio kick load failed:', e);
+  }
+}
+
+function playKickWebAudio(volume = 1) {
+  try {
+    if (!kickBuffer) return false;
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const source = ctx.createBufferSource();
+    source.buffer = kickBuffer;
+    const gainNode = ctx.createGain();
+    gainNode.gain.value = volume;
+    source.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    source.start(0);
+    return true;
+  } catch (e) {
+    console.log('Web Audio kick play failed:', e);
+    return false;
+  }
+}
+
+let audioEnabled = true;
+btnAudio.addEventListener('click', () => {
+  audioEnabled = !audioEnabled;
+  const audioIconOn = document.getElementById('audioIconOn');
+  const audioIconOff = document.getElementById('audioIconOff');
+
+  if (audioEnabled) {
+    audioIconOn.style.display = 'block';
+    audioIconOff.style.display = 'none';
+    btnAudio.classList.remove('audio-off');
+    btnAudio.classList.add('audio-on');
+    bgMusic.muted = false;
+    ruidoG.muted = false;
+  } else {
+    audioIconOn.style.display = 'none';
+    audioIconOff.style.display = 'block';
+    btnAudio.classList.remove('audio-on');
+    btnAudio.classList.add('audio-off');
+    bgMusic.muted = true;
+    ruidoG.muted = true;
+  }
+});
+
+// Exit button
+btnExit.addEventListener('click', () => {
+  hud.classList.add('hidden');
+  splash.classList.remove('hidden');
+  btnStart.disabled = false;
+  playerNameInput.value = '';
+  state.playing = false;
+  state.shots = 0;
+  state.goals = 0;
+  bgMusic.pause();
+  bgMusic.currentTime = 0;
+  ruidoG.pause();
+  ruidoG.currentTime = 0;
+  resetBall();
 });

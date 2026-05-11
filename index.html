@@ -2,13 +2,46 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>Rey AR</title>
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- three.js via importmap (no build step) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- Open Graph for social sharing -->
+  <meta property="og:title" content="Gánale al Rey">
+  <meta property="og:description" content="¡Demuestra tus habilidades de tiro libre! Gánale al Rey en este juego de fútbol.">
+  <meta property="og:image" content="assets/im/ganar.png">
+  <meta property="og:type" content="website">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gánale al Rey">
+  <meta name="twitter:description" content="¡Demuestra tus habilidades de tiro libre! Gánale al Rey en este juego de fútbol.">
+  <meta name="twitter:image" content="assets/im/ganar.png">
+  <title>Gánale al Rey</title>
+  <link rel="icon" href="assets/im/soccer.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Ultra&display=swap">
+  <link rel="stylesheet" href="style.css" />
+  <audio id="bgMusic" loop preload="auto" playsinline>
+    <source src="assets/sound/music/guanteySom.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="ruidoG" loop preload="auto" playsinline>
+    <source src="assets/sound/ruidog.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="silbStart" preload="auto" playsinline>
+    <source src="assets/sound/silb.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="silbEnd" preload="auto" playsinline>
+    <source src="assets/sound/silbfin.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="kickSound" preload="auto" playsinline>
+    <source src="assets/sound/kick.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="golSound" preload="auto" playsinline>
+    <source src="assets/sound/gol.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="abuSound" preload="auto" playsinline>
+    <source src="assets/sound/abu.mp3" type="audio/mpeg">
+  </audio>
   <script type="importmap">
   {
     "imports": {
@@ -17,48 +50,112 @@
     }
   }
   </script>
-
-  <!-- 8th Wall Engine Binary (open source, sin app key, Android + iOS Safari) -->
-  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@8thwall/xrextras@1/dist/xrextras.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
-
-  <!-- MediaPipe Tasks Vision se importa como modulo ES dentro de ar.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <!-- Splash -->
-  <section id="splash" class="screen">
-    <img id="splash-img" src="assets/im/splash.jpg" alt="Splash" />
-    <button id="btn-start">Comenzar</button>
-  </section>
+  <div id="splash" class="screen">
+    <img id="portada" src="assets/im/gamep.jpg" alt="Portada" />
+    <input type="text" id="playerName" placeholder="Escribe tu nombre aquí" class="name-input" maxlength="20" />
+    <button id="btnStart" class="btn-main">JUGAR</button>
+  </div>
 
-  <!-- No-mobile -->
-  <section id="no-mobile" class="screen hidden">
-    <p>Esta funcion solo esta disponible en dispositivos moviles</p>
-  </section>
-
-  <!-- AR overlay -->
-  <section id="ar-overlay" class="hidden">
-    <div id="mode-label">Selfie del REY</div>
-    <div id="hint">Selfie del REY — apunta tu cara a la cámara</div>
-    <button id="btn-exit">Salir</button>
-    <button id="btn-switch">🌍 Modo RA</button>
-    <button id="btn-photo" aria-label="Tomar foto"></button>
-  </section>
-
-  <!-- Photo preview (after capture) -->
-  <section id="photo-preview" class="screen hidden">
-    <img id="photo-img" alt="Foto" />
-    <div class="photo-actions">
-      <a id="photo-download" download="rey-ar.jpg">Descargar</a>
-      <button id="photo-close">Cerrar</button>
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top-right">
+      <button id="btnAudio" class="hud-btn audio-on">
+        <svg id="audioIconOn" class="audio-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15.54 8.46C16.4774 9.39764 17.0036 10.6692 17.0036 12C17.0036 13.3308 16.4774 14.6024 15.54 15.54" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.07 4.93C20.5447 6.40456 21.3762 8.41112 21.3762 10.5C21.3762 12.5889 20.5447 14.5954 19.07 16.07" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg id="audioIconOff" class="audio-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: none;">
+          <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M23 9L17 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M17 9L23 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button id="btnExit" class="hud-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 6L6 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
-  </section>
+    <div id="scoreBox">
+      <div class="player-name" id="playerNameDisplay">Jugador</div>
+      <div class="score-row">
+        <div class="score-label">GOLES</div>
+        <div id="score">0</div>
+      </div>
+    </div>
+    <div id="shotsBox">
+      <div class="shots-label"><img src="assets/im/tiro.svg" alt=""><span id="shotNum">1</span>/<span>10</span></div>
+    </div>
+    <div id="message"></div>
+    <div id="instructions">Desliza para patear</div>
+    <div id="swipePointerLeft">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 50L10 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M22 22L10 10L22 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M10 10L10 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="swipePointer">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 50L30 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M20 20L30 10L40 20" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div id="swipePointerRight">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 50L50 10" stroke="white" stroke-width="6" stroke-linecap="round"/>
+        <path d="M38 22L50 10L38 10" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M50 10L50 22" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
 
+  <!-- End screen -->
+  <div id="endScreen" class="screen hidden">
+    <button id="btnHome" class="btn-home">
+      <img src="assets/im/homeb.svg" alt="Inicio" width="48" height="48">
+    </button>
+    <div class="end-content">
+      <div class="end-image-container">
+        <img id="endWinImage" src="assets/im/ganar.png" alt="Ganaste" class="end-win-image hidden">
+        <img id="endLoseImage" src="assets/im/perderB.png" alt="Perdiste" class="end-lose-image hidden">
+      </div>
+      <div class="end-info">
+        <div class="end-player-name" id="endPlayerName">Jugador</div>
+        <div id="endTitle"></div>
+        <div id="endScore"></div>
+        <button id="btnScreenshot" class="btn-secondary">CAPTURAR PANTALLA</button>
+        <div id="endLoseMessage" class="end-lose-message hidden">PARA GANAR DEBES ANOTAR 6 GOLES POR LO MENOS</div>
+        <button id="btnRestart" class="btn-main">JUGAR OTRA VEZ</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Camera feed canvas (usado por 8th Wall) -->
-  <canvas id="camerafeed" class="hidden"></canvas>
+  <!-- Loading -->
+  <div id="loading" class="screen hidden">
+    <div class="spinner"></div>
+    <img src="assets/im/soccer.svg" alt="Balón" class="loading-ball">
+    <div>Cargando...</div>
+  </div>
 
-  <script type="module" src="js/app.js"></script>
+  <!-- Rotate device overlay -->
+  <div id="rotateOverlay">
+    <div class="rotate-icon">📱</div>
+    <img src="assets/im/soccer.svg" alt="Balón" class="rotate-ball">
+    <div class="rotate-text">Gira tu dispositivo de forma horizontal para poder jugar</div>
+  </div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti"></canvas>
+
+  <canvas id="game"></canvas>
+
+  <script type="module" src="main.js"></script>
 </body>
 </html>
